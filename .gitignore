@@ -1,0 +1,7 @@
+/becker-code
+/becker-code.exe
+/beckercli
+*.app
+*.exe
+*.dmg
+dist/

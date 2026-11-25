@@ -1,0 +1,59 @@
+name: build
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - run: go mod tidy
+      - run: go test ./becker/...
+
+  package:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: darwin
+          - os: windows-latest
+            target: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Linux GUI deps (none needed on macOS/Windows)
+        if: false
+        run: true
+      - run: go mod tidy
+      - name: Install Fyne packaging tool
+        run: go install fyne.io/fyne/v2/cmd/fyne@latest
+      - name: Package macOS .app
+        if: matrix.target == 'darwin'
+        run: |
+          fyne package -os darwin -name "Becker Radio Code" -icon Icon.png
+          zip -r "Becker-Radio-Code-macOS.zip" "Becker Radio Code.app"
+      - name: Package Windows .exe
+        if: matrix.target == 'windows'
+        run: fyne package -os windows -name "Becker Radio Code" -icon Icon.png
+      - name: Upload macOS artifact
+        if: matrix.target == 'darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: becker-code-macOS
+          path: Becker-Radio-Code-macOS.zip
+      - name: Upload Windows artifact
+        if: matrix.target == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: becker-code-Windows
+          path: "*.exe"
